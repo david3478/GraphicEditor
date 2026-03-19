@@ -1,6 +1,9 @@
 package org.example;
 
+import org.example.shape.ShapeType;
+
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -8,9 +11,9 @@ public class GToolBar extends JToolBar {
     private JRadioButton rectangleButton;
     private JRadioButton ovalButton;
     private ButtonGroup buttonGroup;
+    private ShapeType shapeType;
     // ActionListener를 필드로 분리
     private ActionListener shapeListener;
-    private GDrawingPanel drawingPanel;
 
     public GToolBar() {
         this.rectangleButton = new JRadioButton("Rectangle");
@@ -27,14 +30,19 @@ public class GToolBar extends JToolBar {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (e.getSource() == rectangleButton) {
-                    drawingPanel.setCurrentShape(GDrawingPanel.ShapeType.RECTANGLE);
+                    shapeType = ShapeType.RECTANGLE;
                 } else if (e.getSource() == ovalButton) {
-                    drawingPanel.setCurrentShape(GDrawingPanel.ShapeType.OVAL);
+                    shapeType = ShapeType.OVAL;
                 }
             }
         };
 
         this.rectangleButton.addActionListener(shapeListener);
         this.ovalButton.addActionListener(shapeListener);
+    }
+
+    // Getter
+    public ShapeType getShapeType() {
+        return this.shapeType;
     }
 }
