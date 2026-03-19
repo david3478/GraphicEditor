@@ -26,8 +26,6 @@ public class GMainFrame extends JFrame {
 
         this.drawingPanel = new GDrawingPanel();
         this.add(drawingPanel, BorderLayout.CENTER);
-
-        this.drawingPanel.setToolBar(toolBar);
     }
 
     // member functions
