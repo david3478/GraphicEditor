@@ -7,10 +7,6 @@ import java.awt.event.ActionListener;
 public class GToolBar extends JToolBar {
     private JRadioButton rectangleButton;
     private JRadioButton ovalButton;
-    private ButtonGroup buttonGroup;
-    // ActionListener를 필드로 분리
-    private ActionListener shapeListener;
-    private GDrawingPanel drawingPanel;
 
     public GToolBar() {
         this.rectangleButton = new JRadioButton("Rectangle");
@@ -18,23 +14,5 @@ public class GToolBar extends JToolBar {
 
         this.ovalButton = new JRadioButton("Oval");
         this.add(this.ovalButton);
-
-        this.buttonGroup = new ButtonGroup();
-        this.buttonGroup.add(this.rectangleButton);
-        this.buttonGroup.add(this.ovalButton);
-
-        shapeListener = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (e.getSource() == rectangleButton) {
-                    drawingPanel.setCurrentShape(GDrawingPanel.ShapeType.RECTANGLE);
-                } else if (e.getSource() == ovalButton) {
-                    drawingPanel.setCurrentShape(GDrawingPanel.ShapeType.OVAL);
-                }
-            }
-        };
-
-        this.rectangleButton.addActionListener(shapeListener);
-        this.ovalButton.addActionListener(shapeListener);
     }
 }
