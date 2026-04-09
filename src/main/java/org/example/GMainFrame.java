@@ -2,6 +2,8 @@ package org.example;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class GMainFrame extends JFrame {
     // components
@@ -30,5 +32,13 @@ public class GMainFrame extends JFrame {
         // association
     }
 
+
+    private class ToolButtonActionHandler implements ActionListener {
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if(e.)
+        }
+    }
     // member functions
 }

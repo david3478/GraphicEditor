@@ -5,66 +5,137 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
+import java.util.Vector;
 
 public class GDrawingPanel extends JPanel {
 
-    public DrawingState drawingState;
+    private BufferedImage bufferImage;
+    private Vector<GShape> shapes;
+    private GShape currentShape;
 
+    public EDrawingState eDrawingState;
+    private enum EDrawingState {
+        eIdle,
+        eDrawing,
+        eMoving,
+        eResizing,
+        eSearing
+    }
     public GDrawingPanel() {
         this.setBackground(Color.WHITE);
+        eDrawingState = EDrawingState.eIdle;
 
-        drawingState = DrawingState.NONE;
-
+        this.shapes = new Vector<>();
         MouseHandler mouseHandler = new MouseHandler();
         this.addMouseListener(mouseHandler);
         this.addMouseMotionListener(mouseHandler);
     }
 
-    private int x0,y0;
-    private int x1,y1;
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        Graphics2D panelGraphics = (Graphics2D) g;
+        for(GShape shape : shapes) {
+            shape.draw(panelGraphics);
+        }
+    }
 
     private void startRectangularShape(int x, int y) {
-        this.x0 = x;
-        this.y0 = y;
+        this.currentShape = new GShape(x, y, x, y);
 
-        this.drawingState = DrawingState.DRAWING;
+
+        if (this.getWidth() <= 0 || this.getHeight() <= 0) {
+            return;
+        }
+
+        if (this.bufferImage == null
+                || this.bufferImage.getWidth() != this.getWidth()
+                || this.bufferImage.getHeight() != this.getHeight()) {
+            this.bufferImage = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D bufferGraphics = this.bufferImage.createGraphics();
+            bufferGraphics.setColor(this.getBackground());
+            bufferGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
+            bufferGraphics.dispose();
+        }
     }
     private void keepDrawing(int x, int y) {
 
     }
     private void finishRectangularShape(int x, int y) {
-        this.x1 = x;
-        this.y1 = y;
+        this.currentShape.setLocation1(x, y);
 
-        Graphics2D g2d = (Graphics2D) this.getGraphics();
-        g2d.drawRect(this.x0, this.y0, this.x1-this.x0, this.y1-this.y0);
 
-        this.drawingState = DrawingState.NONE;
+        Graphics2D bufferGraphics = this.bufferImage.createGraphics();
+        bufferGraphics.setColor(this.getBackground());
+        bufferGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
+        bufferGraphics.setColor(Color.BLACK);
+        for(GShape shape : shapes) {
+            shape.draw(bufferGraphics);
+        }
+        this.currentShape.draw(bufferGraphics);
+        bufferGraphics.dispose();
+
+        Graphics2D panelGraphics = (Graphics2D) this.getGraphics();
+        if (panelGraphics != null) {
+            panelGraphics.drawImage(this.bufferImage, 0, 0, null);
+            panelGraphics.dispose();
+        }
     }
 
+    private void addShape() {
+        this.shapes.add(this.currentShape);
+    }
     private class MouseHandler implements MouseListener,MouseMotionListener {
 
         @Override
         public void mouseClicked(MouseEvent e) {
-            if(e.getClickCount()==2 && drawingState==DrawingState.DRAWING){
-                finishRectangularShape(e.getX(),e.getY());
-            } else if (e.getClickCount()==1 && drawingState==DrawingState.NONE) {
-                startRectangularShape(e.getX(),e.getY());
+            if(e.getButton() == 1) { // left button
+                if (e.getClickCount()==1) {
+                    mouseLButtonClicked(e);
+                } else if(e.getClickCount()==2){
+                    mouseLButton2Clicked(e);
+                }
             }
         }
+        @Override
+        public void mouseMoved(MouseEvent e) {
+
+        }
+        private void mouseLButtonClicked(MouseEvent e) {
+
+        }
+
+        private void mouseLButton2Clicked(MouseEvent e) {
+
+        }
+
 
         @Override
         public void mousePressed(MouseEvent e) {
 //            startRectangularShape(e.getX(),e.getY());
+            if(eDrawingState == EDrawingState.eIdle) {
+                startRectangularShape(e.getX(),e.getY());
+                eDrawingState = EDrawingState.eDrawing;
+            }
         }
 
         @Override
         public void mouseDragged(MouseEvent e) {
 //            finishRectangularShape(e.getX(),e.getY());
+            if(eDrawingState == EDrawingState.eDrawing) {
+                finishRectangularShape(e.getX(),e.getY());
+            }
         }
         @Override
         public void mouseReleased(MouseEvent e) {
 //            finishRectangularShape(e.getX(),e.getY());
+            if(eDrawingState ==EDrawingState.eDrawing) {
+                addShape();
+                finishRectangularShape(e.getX(),e.getY());
+                eDrawingState = EDrawingState.eIdle;
+            }
         }
 
         @Override
@@ -78,9 +149,29 @@ public class GDrawingPanel extends JPanel {
         }
 
 
-        @Override
-        public void mouseMoved(MouseEvent e) {
+    }
 
+    public class GShape {
+        private int x0, y0, x1, y1;
+
+        public GShape(int x0, int y0, int x1, int y1) {
+            this.x0 = x0;
+            this.y0 = y0;
+            this.x1 = x1;
+            this.y1 = y1;
+        }
+
+        public void setLocation0(int x, int y) {
+            this.x0 = x;
+            this.y0 = y;
+        }
+        public void setLocation1(int x, int y) {
+            this.x1 = x;
+            this.y1 = y;
+        }
+        public void draw(Graphics2D graphics) {
+            graphics.setColor(Color.BLACK);
+            graphics.drawRect(this.x0, this.y0, this.x1 - this.x0, this.y1 - this.y0);
         }
     }
 }
