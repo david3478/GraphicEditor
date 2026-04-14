@@ -3,13 +3,14 @@ package org.example.shape;
 import java.awt.*;
 
 public class GOval extends GShape {
-    public GOval(int x, int y, int width, int height) {
-        super(x, y, width, height);
+    public GOval(int x0, int y0, int x1, int y1) {
+        super(x0, y0, x1, y1);
     }
 
     @Override
-    public void draw(Graphics g) {
-        g.drawOval(x, y, width, height);
+    public void draw(Graphics2D g) {
+        g.setColor(Color.BLACK);
+        g.drawOval(x0, y0, x1 - x0, y1 - y0);
     }
 }
 

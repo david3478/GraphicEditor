@@ -26,6 +26,7 @@ public class GToolBar extends JToolBar {
         this.buttonGroup.add(this.rectangleButton);
         this.buttonGroup.add(this.ovalButton);
 
+        shapeType = ShapeType.SELECT;
         shapeListener = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

@@ -4,28 +4,40 @@ import org.example.shape.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
+import java.util.Vector;
 
 public class GDrawingPanel extends JPanel {
+    private enum EDrawingState {
+        eIdle,
+        eDrawing,
+        eMoving,
+
+        eResizing,
+        eShearing
+    }
+
+    private EDrawingState eDrawingState;
+
+    private BufferedImage bufferImage;
+    private Vector<GShape> shapes;
+    private GShape currentShape;
+
+    private GToolBar toolBar;
 
     public void setToolBar(GToolBar toolBar) {
         this.toolBar =  toolBar;
     }
 
-    private GToolBar toolBar;
-
-    // 그려진 도형들을 저장할 리스트 (부모 클래스 타입으로 참조)
-    private List<GShape> shapes;
-    private GShape currentShape;
-
     public GDrawingPanel() {
         super();
         this.setBackground(Color.WHITE);
+        this.eDrawingState = EDrawingState.eIdle;
 
-        shapes = new ArrayList<>();
+        shapes = new Vector<>();
         currentShape = null;
 
         MouseHandler mouseHandler = new MouseHandler();
@@ -38,61 +50,116 @@ public class GDrawingPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        Graphics2D panelGraphics = (Graphics2D) g;
         // 확정되어 저장된 도형들 그리기
         for (GShape shape : shapes) {
-            shape.draw(g);
+            shape.draw(panelGraphics);
         }
 
-        // 2. 현재 드래그 중인 도형 미리보기
-        if (toolBar.getShapeType() != ShapeType.NONE && currentShape != null) {
-            g.setColor(Color.RED); // 미리보기는 빨간색으로
-            currentShape.draw(g);
-            g.setColor(Color.BLACK); // 색상 원상복구
+    }
+
+    private void makeNewCurrentShape(int x, int y) {
+        if(toolBar.getShapeType() == ShapeType.RECTANGLE) {
+            this.currentShape = new GRectangle(x, y, x, y);
+        } else if(toolBar.getShapeType() == ShapeType.OVAL) {
+            this.currentShape = new GOval(x, y, x, y);
+        } else if(toolBar.getShapeType() == ShapeType.SELECT) {
+            // select
+            this.currentShape = new GRectangle(x, y, x, y);
         }
     }
 
-    private class MouseHandler extends MouseAdapter {
+    private void startRectangularShape(int x, int y) {
+        makeNewCurrentShape(x,y);
+
+        if (this.getWidth() <= 0 || this.getHeight() <= 0) {
+            return;
+        }
+
+        if (this.bufferImage == null
+                || this.bufferImage.getWidth() != this.getWidth()
+                || this.bufferImage.getHeight() != this.getHeight()) {
+            this.bufferImage = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D bufferGraphics = this.bufferImage.createGraphics();
+            bufferGraphics.setColor(this.getBackground());
+            bufferGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
+            bufferGraphics.dispose();
+        }
+    }
+
+    private void keepRectangularShape(int x, int y) {
+        this.currentShape.setLocation1(x, y);
+
+        Graphics2D bufferGraphics = this.bufferImage.createGraphics();
+        bufferGraphics.setColor(this.getBackground());
+        bufferGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
+        bufferGraphics.setColor(Color.BLACK);
+        for (GShape shape : this.shapes) {
+            shape.draw(bufferGraphics);
+        }
+        this.currentShape.draw(bufferGraphics);
+        bufferGraphics.dispose();
+
+        Graphics2D panelGraphics = (Graphics2D) this.getGraphics();
+        if (panelGraphics != null) {
+            panelGraphics.drawImage(this.bufferImage, 0, 0, null);
+            panelGraphics.dispose();
+        }
+    }
+
+    private void finishRectangularShape(int x, int y) {
+        this.currentShape.setLocation1(x, y);
+        addShape();
+        this.currentShape = null;
+        repaint();
+    }
+
+    private void addShape() {
+        this.shapes.add(this.currentShape);
+    }
+
+    private class MouseHandler implements MouseListener, MouseMotionListener {
+
         @Override
         public void mousePressed(MouseEvent e) {
-            if (toolBar.getShapeType() == ShapeType.RECTANGLE) {
-                currentShape = new GRectangle(e.getX(), e.getY(), 0, 0);
-            } else if (toolBar.getShapeType() == ShapeType.OVAL) {
-                currentShape = new GOval(e.getX(), e.getY(), 0, 0);
+            if (eDrawingState == EDrawingState.eIdle) {
+                startRectangularShape(e.getX(), e.getY());
+                eDrawingState = EDrawingState.eDrawing;
             }
         }
 
         @Override
         public void mouseDragged(MouseEvent e) {
-            if (toolBar.getShapeType() != ShapeType.NONE && currentShape != null) {
-                int width = Math.abs(currentShape.getX() - e.getX());
-                int height = Math.abs(currentShape.getY() - e.getY());
-                currentShape.setWidth(width);
-                currentShape.setHeight(height);
-                repaint();
+            if (eDrawingState == EDrawingState.eDrawing) {
+                keepRectangularShape(e.getX(), e.getY());
             }
         }
 
         @Override
         public void mouseReleased(MouseEvent e) {
-            if (toolBar.getShapeType() != ShapeType.NONE && currentShape != null) {
-                Point startPoint = new Point(currentShape.getX(), currentShape.getY());
-                Point currentPoint = new Point(e.getX(), e.getY());
-                int x = Math.min(startPoint.x, currentPoint.x);
-                int y = Math.min(startPoint.y, currentPoint.y);
-                int width = Math.abs(startPoint.x - currentPoint.x);
-                int height = Math.abs(startPoint.y - currentPoint.y);
-
-                if (width > 0 && height > 0) {
-                    if (toolBar.getShapeType() == ShapeType.RECTANGLE) {
-                        shapes.add(new GRectangle(x, y, width, height));
-                    } else if (toolBar.getShapeType() == ShapeType.OVAL) {
-                        shapes.add(new GOval(x, y, width, height));
-                    }
-                }
-
-                currentShape = null;
-                repaint();
+            if (eDrawingState == EDrawingState.eDrawing) {
+                finishRectangularShape(e.getX(), e.getY());
+                eDrawingState = EDrawingState.eIdle;
             }
+        }
+
+        @Override
+        public void mouseMoved(MouseEvent e) {
+
+        }
+        @Override
+        public void mouseClicked(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+
         }
     }
 }

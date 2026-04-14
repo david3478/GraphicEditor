@@ -12,12 +12,13 @@ public class GMainFrame extends JFrame {
     // association
 
     public GMainFrame() {
-        super("GMainFrame");
+        // attributes
+        this.setLocation(200, 200);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setSize(600,400);
         this.setLayout(new BorderLayout());
 
-        // create aggregation
+        // components
         this.menuBar = new GMenuBar();
         this.setJMenuBar(this.menuBar);
 
