@@ -1,14 +1,12 @@
-package org.example;
+package org.example.frames;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class GMainFrame extends JFrame {
     // components
     private GMenuBar menuBar;
-    private GToolBar toolBar;
+    private GShapeToolBar toolBar;
     private GDrawingPanel drawingPanel;
 
     // association
@@ -23,22 +21,23 @@ public class GMainFrame extends JFrame {
         this.menuBar = new GMenuBar();
         this.setJMenuBar(this.menuBar);
 
-        this.toolBar = new GToolBar();
+        this.toolBar = new GShapeToolBar();
         this.add(toolBar, BorderLayout.NORTH);
 
         this.drawingPanel = new GDrawingPanel();
         this.add(drawingPanel, BorderLayout.CENTER);
 
         // association
+        this.drawingPanel.associateWith(this.toolBar);
     }
 
 
-    private class ToolButtonActionHandler implements ActionListener {
-
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            if(e.)
-        }
-    }
+//    private class ToolButtonActionHandler implements ActionListener {
+//
+//        @Override
+//        public void actionPerformed(ActionEvent e) {
+//            if(e.)
+//        }
+//    }
     // member functions
 }

@@ -1,4 +1,8 @@
-package org.example;
+package org.example.frames;
+
+import org.example.shapes.GOval;
+import org.example.shapes.GRectangle;
+import org.example.shapes.GShape;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,6 +19,12 @@ public class GDrawingPanel extends JPanel {
     private GShape currentShape;
 
     public EDrawingState eDrawingState;
+
+    private GShapeToolBar toolBar;
+    public void associateWith(GShapeToolBar toolBar) {
+        this.toolBar = toolBar;
+    }
+
     private enum EDrawingState {
         eIdle,
         eDrawing,
@@ -23,6 +33,7 @@ public class GDrawingPanel extends JPanel {
         eSearing
     }
     public GDrawingPanel() {
+        // attributes
         this.setBackground(Color.WHITE);
         eDrawingState = EDrawingState.eIdle;
 
@@ -37,14 +48,21 @@ public class GDrawingPanel extends JPanel {
         super.paintComponent(g);
 
         Graphics2D panelGraphics = (Graphics2D) g;
-        for(GShape shape : shapes) {
-            shape.draw(panelGraphics);
+
+        if (panelGraphics != null) {
+            panelGraphics.drawImage(this.bufferImage, 0, 0, null);
+            panelGraphics.dispose();
         }
     }
 
     private void startRectangularShape(int x, int y) {
-        this.currentShape = new GShape(x, y, x, y);
-
+        if(this.toolBar.getEShapeType() == GShapeToolBar.EShapeType.eRectangle) {
+            this.currentShape = new GRectangle(x, y, x, y);
+        } else if(this.toolBar.getEShapeType() == GShapeToolBar.EShapeType.eOval) {
+            this.currentShape = new GOval(x, y, x, y);
+        } else if(this.toolBar.getEShapeType() == GShapeToolBar.EShapeType.eSelect) {
+            this.currentShape = new GRectangle(x, y, x, y);
+        }
 
         if (this.getWidth() <= 0 || this.getHeight() <= 0) {
             return;
@@ -70,18 +88,13 @@ public class GDrawingPanel extends JPanel {
         Graphics2D bufferGraphics = this.bufferImage.createGraphics();
         bufferGraphics.setColor(this.getBackground());
         bufferGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
-        bufferGraphics.setColor(Color.BLACK);
+        bufferGraphics.setColor(this.getGraphics().getColor());
         for(GShape shape : shapes) {
             shape.draw(bufferGraphics);
         }
         this.currentShape.draw(bufferGraphics);
         bufferGraphics.dispose();
-
-        Graphics2D panelGraphics = (Graphics2D) this.getGraphics();
-        if (panelGraphics != null) {
-            panelGraphics.drawImage(this.bufferImage, 0, 0, null);
-            panelGraphics.dispose();
-        }
+        repaint();
     }
 
     private void addShape() {
@@ -151,27 +164,5 @@ public class GDrawingPanel extends JPanel {
 
     }
 
-    public class GShape {
-        private int x0, y0, x1, y1;
 
-        public GShape(int x0, int y0, int x1, int y1) {
-            this.x0 = x0;
-            this.y0 = y0;
-            this.x1 = x1;
-            this.y1 = y1;
-        }
-
-        public void setLocation0(int x, int y) {
-            this.x0 = x;
-            this.y0 = y;
-        }
-        public void setLocation1(int x, int y) {
-            this.x1 = x;
-            this.y1 = y;
-        }
-        public void draw(Graphics2D graphics) {
-            graphics.setColor(Color.BLACK);
-            graphics.drawRect(this.x0, this.y0, this.x1 - this.x0, this.y1 - this.y0);
-        }
-    }
 }

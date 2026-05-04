@@ -1,4 +1,6 @@
-package org.example;
+package org.example.frames;
+
+import org.example.menus.GFileMenu;
 
 import javax.swing.*;
 

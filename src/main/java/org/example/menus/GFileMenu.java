@@ -1,4 +1,4 @@
-package org.example;
+package org.example.menus;
 
 import javax.swing.*;
 
