@@ -4,6 +4,11 @@ import java.awt.*;
 
 public abstract class GShape {
     protected int x0, y0, x1, y1;
+    public enum EAnchor {
+        eRotate,
+        eMove,
+        eResize
+    }
 
     public GShape(int x0, int y0, int x1, int y1) {
         this.x0 = x0;
@@ -12,6 +17,20 @@ public abstract class GShape {
         this.y1 = y1;
     }
 
+    public void move(int x, int y) {
+        this.setLocation0(x, y);
+
+    }
+    public void resize(int x, int y) {
+
+    }
+    public void rotate(int x, int y) {
+
+    }
+    public EAnchor onShape(int x, int y) {
+
+        return EAnchor.eMove;
+    }
     public void setLocation0(int x, int y) {
         this.x0 = x;
         this.y0 = y;

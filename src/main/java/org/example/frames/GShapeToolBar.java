@@ -6,7 +6,19 @@ import java.awt.event.ActionListener;
 
 public class GShapeToolBar extends JToolBar {
     public enum EShapeType {
-        eSelect, eRectangle, eOval, eLine, ePolygon
+        eSelect("선택"),
+        eRectangle("네모"),
+        eOval("동그라미"),
+        eLine("라인"),
+        ePolygon("폴리곤");
+
+        private String name;
+        private EShapeType(String name) {
+            this.name = name;
+        }
+        public String getName() {
+            return name;
+        }
     }
 
     private EShapeType eShapeType;
@@ -19,23 +31,14 @@ public class GShapeToolBar extends JToolBar {
         ButtonGroup buttonGroup = new ButtonGroup();
         eShapeType = EShapeType.eSelect;
 
-        JRadioButton selectButton = new JRadioButton("select");
-        this.add(selectButton);
-        buttonGroup.add(selectButton);
-        selectButton.addActionListener(actionHandler);
-        selectButton.setActionCommand(EShapeType.eSelect.toString());
-
-        JRadioButton rectangleButton = new JRadioButton("Rectangle");
-        this.add(rectangleButton);
-        buttonGroup.add(rectangleButton);
-        rectangleButton.addActionListener(actionHandler);
-        rectangleButton.setActionCommand(EShapeType.eRectangle.toString());
-
-        JRadioButton ovalButton = new JRadioButton("Oval");
-        this.add(ovalButton);
-        buttonGroup.add(ovalButton);
-        ovalButton.addActionListener(actionHandler);
-        ovalButton.setActionCommand(EShapeType.eOval.toString());
+        for(EShapeType type: EShapeType.values()) {
+            JRadioButton radioButton = new JRadioButton(type.getName());
+            this.add(radioButton);
+            buttonGroup.add(radioButton);
+            radioButton.addActionListener(actionHandler);
+            radioButton.setActionCommand(type.toString());
+        }
+        ((JRadioButton)(this.getComponentAtIndex(EShapeType.eSelect.ordinal()))).doClick();
     }
 
     private class ActionHandler implements ActionListener {
