@@ -1,5 +1,6 @@
 package org.example.frames;
 
+import org.example.global.Constants;
 import org.example.shapes.GOval;
 import org.example.shapes.GRectangle;
 import org.example.shapes.GShape;
@@ -55,91 +56,89 @@ public class GDrawingPanel extends JPanel {
         }
     }
 
-    private void startRectangularShape(int x, int y) {
-        if(this.eDrawingState == EDrawingState.eIdle) {
-            if(this.toolBar.getEShapeType() == GShapeToolBar.EShapeType.eSelect) {
-                for(GShape shape : this.shapes) {
-                    GShape.EAnchor eAnchor = shape.onShape(x, y);
-                    if(eAnchor != null) {
-                        this.currentShape = shape;
-                        if(eAnchor == GShape.EAnchor.eMove) {
-                            eDrawingState = EDrawingState.eMoving;
-                        } else if(eAnchor == GShape.EAnchor.eRotate){
-                            eDrawingState = EDrawingState.eRotating;
-                        } else { // resize
-                            eDrawingState = EDrawingState.eResizing;
-
-                        }
-                        this.currentShape = shape;
-                        break;
-                    }
-                }
-            } else { // drawing
-                if(this.toolBar.getEShapeType() == GShapeToolBar.EShapeType.eRectangle) {
-                    this.currentShape = new GRectangle(x, y, x, y);
-                } else if(this.toolBar.getEShapeType() == GShapeToolBar.EShapeType.eOval) {
-                    this.currentShape = new GOval(x, y, x, y);
-                }
-                this.eDrawingState = EDrawingState.eDrawing;
-            }
-        }
-
-
-        if (this.getWidth() <= 0 || this.getHeight() <= 0 || this.eDrawingState == EDrawingState.eIdle) {
+    private void startDrawing(int x, int y) {
+        if (getWidth() <= 0 || getHeight() <= 0) {
             return;
         }
 
-        if (this.bufferImage == null
-                || this.bufferImage.getWidth() != this.getWidth()
-                || this.bufferImage.getHeight() != this.getHeight()) {
-            this.bufferImage = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
-            Graphics2D bufferGraphics = this.bufferImage.createGraphics();
-            bufferGraphics.setColor(this.getBackground());
-            bufferGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
+        if (bufferImage == null
+                || bufferImage.getWidth() != getWidth()
+                || bufferImage.getHeight() != getHeight()) {
+            bufferImage = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D bufferGraphics = bufferImage.createGraphics();
+            bufferGraphics.setColor(getBackground());
+            bufferGraphics.fillRect(0, 0, getWidth(), getHeight());
             bufferGraphics.dispose();
         }
     }
+    private void startNewShape(int x, int y) {
+        currentShape = toolBar.getEShapeType().getShape();
+        currentShape.setLocation0(x, y);
+        currentShape.setLocation1(x, y);
+//        if(toolBar.getEShapeType() == Constants.EShapeType.eRectangle) {
+//            currentShape = new GRectangle(x, y, x, y);
+//        } else if(toolBar.getEShapeType() == Constants.EShapeType.eOval) {
+//
+//        }
+    }
+    private void startTransform(int x, int y) {
+        for(GShape shape : shapes) { // operation
+            GShape.EAnchor eAnchor = shape.onShape(x, y);
+            if(eAnchor != null) {
+                currentShape = shape;
+                if(eAnchor == GShape.EAnchor.eMove) {
+                    eDrawingState = EDrawingState.eMoving;
+                } else if(eAnchor == GShape.EAnchor.eRotate){
+                    eDrawingState = EDrawingState.eRotating;
+                } else { // resize
+                    eDrawingState = EDrawingState.eResizing;
 
-    private void keepDrawing(int x, int y) {
-        if(this.eDrawingState != EDrawingState.eIdle) {
-            Graphics2D bufferGraphics = this.bufferImage.createGraphics();
-            bufferGraphics.setColor(this.getBackground());
-            bufferGraphics.fillRect(0, 0, this.getWidth(), this.getHeight());
-            bufferGraphics.setColor(this.getGraphics().getColor());
-
-            if (this.eDrawingState == EDrawingState.eDrawing) {
-                this.currentShape.setLocation1(x, y);
-                this.currentShape.draw(bufferGraphics);
-            } else if (this.eDrawingState == EDrawingState.eMoving) {
-                this.currentShape.move(x, y);
-            } else if (this.eDrawingState == EDrawingState.eResizing) {
-                this.currentShape.resize(x, y);
-            } else if (this.eDrawingState == EDrawingState.eRotating) {
-                this.currentShape.rotate(x, y);
+                }
+                currentShape = shape;
+                break;
             }
-            for (GShape shape : shapes) {
-                shape.draw(bufferGraphics);
-            }
-            this.currentShape.draw(bufferGraphics);
-            bufferGraphics.dispose();
-            repaint();
         }
     }
 
-    private void finishRectangularShape(int x, int y) {
-        if(this.eDrawingState != EDrawingState.eIdle) {
-            if(this.toolBar.getEShapeType() != GShapeToolBar.EShapeType.eSelect) {
+    private void keepTransform(int x, int y) {
+        Graphics2D bufferGraphics = bufferImage.createGraphics();
+        bufferGraphics.setColor(this.getBackground());
+        bufferGraphics.fillRect(0, 0, getWidth(), getHeight());
+        bufferGraphics.setColor(this.getForeground());
+
+        if (eDrawingState == EDrawingState.eDrawing) {
+            currentShape.setLocation1(x, y);
+            currentShape.draw(bufferGraphics);
+        } else if (eDrawingState == EDrawingState.eMoving) {
+            currentShape.move(x, y);
+        } else if (eDrawingState == EDrawingState.eResizing) {
+            currentShape.resize(x, y);
+        } else if (eDrawingState == EDrawingState.eRotating) {
+            currentShape.rotate(x, y);
+        }
+        for (GShape shape : shapes) {
+            shape.draw(bufferGraphics);
+        }
+        currentShape.draw(bufferGraphics);
+        bufferGraphics.dispose();
+        repaint();
+    }
+
+    private void finishTransform(int x, int y) {
+        if(this.eDrawingState == EDrawingState.eDrawing) {
+            if(this.toolBar.getEShapeType() != Constants.EShapeType.eSelect) {
                 addShape();
             }
             this.currentShape = null;
-            this.eDrawingState = EDrawingState.eIdle;
         }
     }
 
+    private void continueDrawing(int x, int y) {
+
+    }
+
     private void addShape() {
-        if(this.eDrawingState == EDrawingState.eDrawing) {
-            this.shapes.add(this.currentShape);
-        }
+        this.shapes.add(this.currentShape);
     }
     private class MouseHandler implements MouseListener,MouseMotionListener {
 
@@ -153,42 +152,69 @@ public class GDrawingPanel extends JPanel {
                 }
             }
         }
+        private void mouseLButtonClicked(MouseEvent e) {
+            if(eDrawingState == EDrawingState.eIdle) { // target state
+                if(toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) { // context
+                    startNewShape(e.getX(), e.getY());
+                } else {
+                    if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) {
+                        continueDrawing(e.getX(), e.getY());
+                    }
+                }
+                startDrawing(e.getX(), e.getY()); // prepare for double buffering
+            }
+        }
         @Override
         public void mouseMoved(MouseEvent e) {
-
-        }
-        private void mouseLButtonClicked(MouseEvent e) {
-
+            if(eDrawingState != EDrawingState.eIdle) {
+                if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) { // context
+                    keepTransform(e.getX(), e.getY());
+                }
+            }
         }
 
         private void mouseLButton2Clicked(MouseEvent e) {
-
+            if(eDrawingState != EDrawingState.eIdle) {
+                if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) {
+                    finishTransform(e.getX(), e.getY());
+                    eDrawingState = EDrawingState.eIdle;
+                }
+            }
         }
 
 
         @Override
         public void mousePressed(MouseEvent e) {
-//            startRectangularShape(e.getX(),e.getY());
-//            if(eDrawingState == EDrawingState.eIdle) {
-                startRectangularShape(e.getX(),e.getY());
-//                eDrawingState = EDrawingState.eDrawing;
-//            }
+            if(eDrawingState == EDrawingState.eIdle) { // target state
+                if(toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+                    if(toolBar.getEShapeType() == Constants.EShapeType.eSelect) { // context
+                        startTransform(e.getX(), e.getY());
+                    } else { // drawing
+                        startNewShape(e.getX(), e.getY());
+                        eDrawingState = EDrawingState.eDrawing;
+                    }
+                    startDrawing(e.getX(), e.getY()); // prepare for double buffering
+                }
+            }
         }
 
         @Override
         public void mouseDragged(MouseEvent e) {
-//            finishRectangularShape(e.getX(),e.getY());
-//            if(eDrawingState == EDrawingState.eDrawing) {
-                keepDrawing(e.getX(),e.getY());
-//            }
+            if(eDrawingState != EDrawingState.eIdle) {
+                if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+                    keepTransform(e.getX(), e.getY());
+                }
+            }
         }
+
         @Override
         public void mouseReleased(MouseEvent e) {
-//            finishRectangularShape(e.getX(),e.getY());
-//            if(eDrawingState ==EDrawingState.eDrawing) {
-                finishRectangularShape(e.getX(),e.getY());
-//                eDrawingState = EDrawingState.eIdle;
-//            }
+            if(eDrawingState != EDrawingState.eIdle) {
+                if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+                    finishTransform(e.getX(), e.getY());
+                    eDrawingState = EDrawingState.eIdle;
+                }
+            }
         }
 
         @Override
@@ -203,6 +229,7 @@ public class GDrawingPanel extends JPanel {
 
 
     }
+
 
 
 }
