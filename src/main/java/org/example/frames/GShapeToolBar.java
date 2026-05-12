@@ -9,7 +9,7 @@ public class GShapeToolBar extends JToolBar {
         eSelect("선택"),
         eRectangle("네모"),
         eOval("동그라미"),
-        eLine("라인"),
+//        eLine("라인"),
         ePolygon("폴리곤");
 
         private String name;
