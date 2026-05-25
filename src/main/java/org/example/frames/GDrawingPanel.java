@@ -1,9 +1,9 @@
 package org.example.frames;
 
 import org.example.global.Constants;
-import org.example.shapes.GOval;
-import org.example.shapes.GRectangle;
 import org.example.shapes.GShape;
+import org.example.transformer.GDrawer;
+import org.example.transformer.GTransformer;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,36 +14,48 @@ import java.awt.image.BufferedImage;
 import java.util.Vector;
 
 public class GDrawingPanel extends JPanel {
-
-    private BufferedImage bufferImage;
-    private Vector<GShape> shapes;
-    private GShape currentShape;
-
-    public EDrawingState eDrawingState;
-
-    private GShapeToolBar toolBar;
-    public void associateWith(GShapeToolBar toolBar) {
-        this.toolBar = toolBar;
-    }
-
+    // declaration
     private enum EDrawingState {
         eIdle,
-        eDrawing,
-        eMoving,
-        eResizing,
-        eRotating, eSearing
+        eTransforming
     }
+
+    // attributes
+    private EDrawingState eDrawingState;
+
+    // components
+    private final Vector<GShape> shapes;
+    private BufferedImage bufferImage;
+    private GTransformer transformer;
+
+    // association
+    private GShapeToolBar toolBar;
+
+    // working objects
+//    private GShape currentShape;
+
+    // constructor
     public GDrawingPanel() {
         // attributes
         this.setBackground(Color.WHITE);
         eDrawingState = EDrawingState.eIdle;
 
+        // components
         this.shapes = new Vector<>();
+        this.bufferImage = null;
+        this.transformer = null;
+
         MouseHandler mouseHandler = new MouseHandler();
         this.addMouseListener(mouseHandler);
         this.addMouseMotionListener(mouseHandler);
     }
 
+    // setters and getters
+    public void associateWith(GShapeToolBar toolBar) {
+        this.toolBar = toolBar;
+    }
+
+    // methods
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -56,7 +68,7 @@ public class GDrawingPanel extends JPanel {
         }
     }
 
-    private void startDrawing(int x, int y) {
+    private void prepareDrawing() {
         if (getWidth() <= 0 || getHeight() <= 0) {
             return;
         }
@@ -71,33 +83,40 @@ public class GDrawingPanel extends JPanel {
             bufferGraphics.dispose();
         }
     }
-    private void startNewShape(int x, int y) {
-        currentShape = toolBar.getEShapeType().getShape();
+    private GShape startNewShape(int x, int y) {
+        GShape currentShape = toolBar.getEShapeType().getShape();
         currentShape.setLocation0(x, y);
         currentShape.setLocation1(x, y);
-//        if(toolBar.getEShapeType() == Constants.EShapeType.eRectangle) {
-//            currentShape = new GRectangle(x, y, x, y);
-//        } else if(toolBar.getEShapeType() == Constants.EShapeType.eOval) {
-//
-//        }
+        return currentShape;
     }
     private void startTransform(int x, int y) {
-        for(GShape shape : shapes) { // operation
-            GShape.EAnchor eAnchor = shape.onShape(x, y);
-            if(eAnchor != null) {
-                currentShape = shape;
-                if(eAnchor == GShape.EAnchor.eMove) {
-                    eDrawingState = EDrawingState.eMoving;
-                } else if(eAnchor == GShape.EAnchor.eRotate){
-                    eDrawingState = EDrawingState.eRotating;
-                } else { // resize
-                    eDrawingState = EDrawingState.eResizing;
-
+        if (toolBar.getEShapeType() == Constants.EShapeType.eSelect) {
+            for(GShape shape : shapes) { // operation
+                GShape.EAnchor eAnchor = shape.onShape(x, y);
+                if(eAnchor != null) {
+                    if(eAnchor == GShape.EAnchor.eMove) {
+                        this.transformer = new GDrawer(shape);
+//                        eDrawingState = EDrawingState.eMoving;
+                    } else if(eAnchor == GShape.EAnchor.eRotate){
+                        this.transformer = new GDrawer(shape);
+//                        eDrawingState = EDrawingState.eRotating;
+                    } else { // resize
+                        this.transformer = new GDrawer(shape);
+//                        eDrawingState = EDrawingState.eResizing;
+                    }
+                    this.transformer.start(x, y);
+//                    currentShape = shape;
+                    break;
                 }
-                currentShape = shape;
-                break;
             }
+        } else {
+            GShape currentShape = startNewShape(x, y);
+            this.transformer = new GDrawer(currentShape);
+            this.shapes.add(currentShape);
+            this.transformer.start(x, y);
         }
+
+        prepareDrawing();   // prepare for double buffering
     }
 
     private void keepTransform(int x, int y) {
@@ -106,40 +125,34 @@ public class GDrawingPanel extends JPanel {
         bufferGraphics.fillRect(0, 0, getWidth(), getHeight());
         bufferGraphics.setColor(this.getForeground());
 
-        if (eDrawingState == EDrawingState.eDrawing) {
-            currentShape.setLocation1(x, y);
-            currentShape.draw(bufferGraphics);
-        } else if (eDrawingState == EDrawingState.eMoving) {
-            currentShape.move(x, y);
-        } else if (eDrawingState == EDrawingState.eResizing) {
-            currentShape.resize(x, y);
-        } else if (eDrawingState == EDrawingState.eRotating) {
-            currentShape.rotate(x, y);
-        }
+        this.transformer.keep(x, y);
+//        if (eDrawingState == EDrawingState.eDrawing) {
+//            currentShape.setLocation1(x, y);
+//            currentShape.draw(bufferGraphics);
+//        } else if (eDrawingState == EDrawingState.eMoving) {
+//            currentShape.move(x, y);
+//        } else if (eDrawingState == EDrawingState.eResizing) {
+//            currentShape.resize(x, y);
+//        } else if (eDrawingState == EDrawingState.eRotating) {
+//            currentShape.rotate(x, y);
+//        }
         for (GShape shape : shapes) {
             shape.draw(bufferGraphics);
         }
-        currentShape.draw(bufferGraphics);
         bufferGraphics.dispose();
         repaint();
     }
 
     private void finishTransform(int x, int y) {
-        if(this.eDrawingState == EDrawingState.eDrawing) {
-            if(this.toolBar.getEShapeType() != Constants.EShapeType.eSelect) {
-                addShape();
-            }
-            this.currentShape = null;
-        }
+        this.transformer.finish(x, y);
+        this.transformer = null;
+        eDrawingState = EDrawingState.eIdle;
     }
 
     private void continueDrawing(int x, int y) {
 
     }
 
-    private void addShape() {
-        this.shapes.add(this.currentShape);
-    }
     private class MouseHandler implements MouseListener,MouseMotionListener {
 
         @Override
@@ -156,17 +169,18 @@ public class GDrawingPanel extends JPanel {
             if(eDrawingState == EDrawingState.eIdle) { // target state
                 if(toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) { // context
                     startNewShape(e.getX(), e.getY());
+                    eDrawingState = EDrawingState.eTransforming;
                 } else {
                     if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) {
                         continueDrawing(e.getX(), e.getY());
                     }
                 }
-                startDrawing(e.getX(), e.getY()); // prepare for double buffering
+                prepareDrawing(); // prepare for double buffering
             }
         }
         @Override
         public void mouseMoved(MouseEvent e) {
-            if(eDrawingState != EDrawingState.eIdle) {
+            if(eDrawingState == EDrawingState.eTransforming) {
                 if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) { // context
                     keepTransform(e.getX(), e.getY());
                 }
@@ -185,23 +199,18 @@ public class GDrawingPanel extends JPanel {
 
         @Override
         public void mousePressed(MouseEvent e) {
-            if(eDrawingState == EDrawingState.eIdle) { // target state
-                if(toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
-                    if(toolBar.getEShapeType() == Constants.EShapeType.eSelect) { // context
-                        startTransform(e.getX(), e.getY());
-                    } else { // drawing
-                        startNewShape(e.getX(), e.getY());
-                        eDrawingState = EDrawingState.eDrawing;
-                    }
-                    startDrawing(e.getX(), e.getY()); // prepare for double buffering
+            if(toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+                if(eDrawingState == EDrawingState.eIdle) { // target state
+                    startTransform(e.getX(), e.getY());
+                    eDrawingState = EDrawingState.eTransforming;
                 }
             }
         }
 
         @Override
         public void mouseDragged(MouseEvent e) {
-            if(eDrawingState != EDrawingState.eIdle) {
-                if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+            if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+                if(eDrawingState == EDrawingState.eTransforming) {
                     keepTransform(e.getX(), e.getY());
                 }
             }
@@ -209,8 +218,8 @@ public class GDrawingPanel extends JPanel {
 
         @Override
         public void mouseReleased(MouseEvent e) {
-            if(eDrawingState != EDrawingState.eIdle) {
-                if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+            if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.e2Point) {
+                if(eDrawingState == EDrawingState.eTransforming) {
                     finishTransform(e.getX(), e.getY());
                     eDrawingState = EDrawingState.eIdle;
                 }
