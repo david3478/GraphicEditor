@@ -3,6 +3,7 @@ package org.example.frames;
 import org.example.global.Constants;
 import org.example.shapes.GShape;
 import org.example.transformer.GDrawer;
+import org.example.transformer.GTranslator;
 import org.example.transformer.GTransformer;
 
 import javax.swing.*;
@@ -85,8 +86,8 @@ public class GDrawingPanel extends JPanel {
     }
     private GShape startNewShape(int x, int y) {
         GShape currentShape = toolBar.getEShapeType().getShape();
-        currentShape.setLocation0(x, y);
-        currentShape.setLocation1(x, y);
+//        currentShape.setLocation0(x, y);
+//        currentShape.setLocation1(x, y);
         return currentShape;
     }
     private void startTransform(int x, int y) {
@@ -95,19 +96,19 @@ public class GDrawingPanel extends JPanel {
                 GShape.EAnchor eAnchor = shape.onShape(x, y);
                 if(eAnchor != null) {
                     if(eAnchor == GShape.EAnchor.eMove) {
-                        this.transformer = new GDrawer(shape);
-//                        eDrawingState = EDrawingState.eMoving;
+                        this.transformer = new GTranslator(shape);
                     } else if(eAnchor == GShape.EAnchor.eRotate){
                         this.transformer = new GDrawer(shape);
-//                        eDrawingState = EDrawingState.eRotating;
                     } else { // resize
                         this.transformer = new GDrawer(shape);
-//                        eDrawingState = EDrawingState.eResizing;
                     }
                     this.transformer.start(x, y);
-//                    currentShape = shape;
                     break;
                 }
+            }
+            if (this.transformer == null) {    // select state not onshape
+                this.transformer = new GDrawer(startNewShape(x, y));
+                this.transformer.start(x, y);
             }
         } else {
             GShape currentShape = startNewShape(x, y);
@@ -146,7 +147,7 @@ public class GDrawingPanel extends JPanel {
     private void finishTransform(int x, int y) {
         this.transformer.finish(x, y);
         this.transformer = null;
-        eDrawingState = EDrawingState.eIdle;
+//        eDrawingState = EDrawingState.eIdle;
     }
 
     private void continueDrawing(int x, int y) {

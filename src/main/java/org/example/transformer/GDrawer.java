@@ -12,16 +12,17 @@ public class GDrawer extends GTransformer {
 
     @Override
     public void start(int x, int y) {
-
+        shape.setLocation0(x, y);
+        shape.setLocation1(x, y);
     }
 
     @Override
     public void keep(int x, int y) {
-
+        shape.setLocation1(x, y);
     }
 
     @Override
     public void finish(int x, int y) {
-
+        shape.setLocation1(x, y);
     }
 }
