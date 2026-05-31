@@ -39,4 +39,6 @@ public class Constants {
             return shape.clone();
         }
     }
+
+    public final int ANCHOR_SIZE = 10;
 }
