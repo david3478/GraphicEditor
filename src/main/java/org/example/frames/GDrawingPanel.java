@@ -1,12 +1,8 @@
 package org.example.frames;
 
 import org.example.global.Constants;
-import org.example.shapes.GGroup;
 import org.example.shapes.GShape;
-import org.example.transformer.GDrawer;
-import org.example.transformer.GSelector;
-import org.example.transformer.GTranslator;
-import org.example.transformer.GTransformer;
+import org.example.transformer.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -25,6 +21,7 @@ public class GDrawingPanel extends JPanel {
 
     // attributes
     private EDrawingState eDrawingState;
+    private Color shapeLineColor;
 
     // components
     private final Vector<GShape> shapes;
@@ -35,14 +32,12 @@ public class GDrawingPanel extends JPanel {
     // association
     private GShapeToolBar toolBar;
 
-    // working objects
-//    private GShape currentShape;
-
     // constructor
     public GDrawingPanel() {
         // attributes
         this.setBackground(Color.WHITE);
         eDrawingState = EDrawingState.eIdle;
+        this.shapeLineColor = Color.BLACK;
 
         // components
         this.shapes = new Vector<>();
@@ -58,6 +53,26 @@ public class GDrawingPanel extends JPanel {
     // setters and getters
     public void associateWith(GShapeToolBar toolBar) {
         this.toolBar = toolBar;
+    }
+    public void setShapeLineColor(Color selectedColor) {
+        this.shapeLineColor = selectedColor;
+
+        // 선택된 도형들의 색상을 즉시 변경
+        if (!selectedShapes.isEmpty()) {
+            for (GShape shape : selectedShapes) {
+                shape.setLineColor(selectedColor);
+            }
+            Graphics2D bufferGraphics = bufferImage.createGraphics();
+            bufferGraphics.setColor(this.getBackground());
+            bufferGraphics.fillRect(0, 0, getWidth(), getHeight());
+            bufferGraphics.setColor(this.getForeground());
+
+            for (GShape s : shapes) {
+                s.draw(bufferGraphics);
+            }
+            bufferGraphics.dispose();
+            repaint();
+        }
     }
 
     // methods
@@ -88,51 +103,37 @@ public class GDrawingPanel extends JPanel {
             bufferGraphics.dispose();
         }
     }
-    private GShape startNewShape(int x, int y) {
-        GShape currentShape = toolBar.getEShapeType().getShape();
-//        currentShape.setLocation0(x, y);
-//        currentShape.setLocation1(x, y);
-        return currentShape;
+    private GShape startNewShape() {
+        GShape newShape = toolBar.getEShapeType().getShape();
+        newShape.setLineColor(shapeLineColor);
+        return newShape;
     }
+
     private void startTransform(int x, int y) {
         if (toolBar.getEShapeType() == Constants.EShapeType.eSelect) {
             GShape target = getTargetShape(x, y);
             if(target != null) {
+                if (!selectedShapes.contains(target)) {
+                    initSelectedShapes();
+                    selectedShapes.add(target);
+                    target.setSelected(true);
+                }
+
                 GShape.EAnchor eAnchor = target.onShape(x, y); // 그룹의 onShape가 실행됨
                 if (eAnchor == GShape.EAnchor.eMove) { // translate
-                    this.transformer = new GTranslator(target);
+                    this.transformer = new GTranslator(selectedShapes);
                 } else if (eAnchor == GShape.EAnchor.eRotate) { // rotate
-                    this.transformer = new GDrawer(target);
+                    this.transformer = new GRotate(target, selectedShapes);
                 } else { // resize
-                    this.transformer = new GDrawer(target);
+                    this.transformer = new GScale(target, eAnchor, selectedShapes);
                 }
             } else {    // select state not onshape
-                this.transformer = new GSelector(startNewShape(x, y));
+                this.transformer = new GSelector(startNewShape());
                 initSelectedShapes();
             }
             this.transformer.start(x, y);
-//            for(GShape shape : shapes) { // operation
-//                GShape.EAnchor eAnchor = shape.onShape(x, y);
-//                if(eAnchor != null) {
-//                    GShape target = selectedShapes.contains(shape) ? new GGroup(selectedShapes) : shape;
-//                    if(eAnchor == GShape.EAnchor.eMove) {
-//                        this.transformer = new GTranslator(target);
-//                    } else if(eAnchor == GShape.EAnchor.eRotate){
-//                        this.transformer = new GDrawer(target);
-//                    } else { // resize
-//                        this.transformer = new GDrawer(target);
-//                    }
-//                    this.transformer.start(x, y);
-//                    break;
-//                }
-//            }
-//            if (this.transformer == null) {    // select state not onshape
-//                this.transformer = new GSelector(startNewShape(x, y));
-//                this.transformer.start(x, y);
-//                initSelectedShapes();
-//            }
         } else {
-            GShape currentShape = startNewShape(x, y);
+            GShape currentShape = startNewShape();
             this.transformer = new GDrawer(currentShape);
             this.shapes.add(currentShape);
             this.transformer.start(x, y);
@@ -145,20 +146,15 @@ public class GDrawingPanel extends JPanel {
     private GShape getTargetShape(int x, int y) {
         for (GShape shape : shapes) {
             if (shape.onShape(x, y) != null) {
-                // 클릭한 도형이 이미 다중 선택된 장바구니에 있다면? -> 임시 그룹으로 묶어서 반환
-                if (selectedShapes.contains(shape)) {
-                    return new GGroup(selectedShapes);
-                }
-                // 아니라면? -> 기존 다중 선택 무시하고 얘 하나만 반환
-                selectedShapes.clear();
-                selectedShapes.add(shape);
                 return shape;
             }
         }
-        return null; // 빈 공간 클릭
+        return null;
     }
 
     private void initSelectedShapes() {
+        for(GShape s : selectedShapes) s.setSelected(false);
+        for(GShape s : shapes) s.setSelected(false);
         this.selectedShapes.clear();
     }
 
@@ -177,9 +173,6 @@ public class GDrawingPanel extends JPanel {
         if (this.transformer instanceof GSelector selector) {
             selector.draw(bufferGraphics);
         }
-//        for (GShape selectedShape : selectedShapes) {
-//            selectedShape.drawAnchors(bufferGraphics);
-//        }
         bufferGraphics.dispose();
         repaint();
     }
@@ -188,9 +181,9 @@ public class GDrawingPanel extends JPanel {
         this.transformer.finish(x, y);
 
         if (this.transformer instanceof GSelector) {
+            initSelectedShapes();
             ((GSelector) this.transformer).processSelection(this.shapes, this.selectedShapes);
         }
-        this.transformer = null;
 
         Graphics2D bufferGraphics = bufferImage.createGraphics();
         bufferGraphics.setColor(this.getBackground());
@@ -200,16 +193,24 @@ public class GDrawingPanel extends JPanel {
         for (GShape shape : shapes) {
             shape.draw(bufferGraphics);
         }
-//        for (GShape selectedShape : selectedShapes) {
-//            selectedShape.drawAnchors(bufferGraphics);
-//        }
+        this.transformer = null;
 
         repaint();
-//        eDrawingState = EDrawingState.eIdle;
     }
 
     private void continueDrawing(int x, int y) {
+        this.transformer.cont(x, y);
 
+        Graphics2D bufferGraphics = bufferImage.createGraphics();
+        bufferGraphics.setColor(this.getBackground());
+        bufferGraphics.fillRect(0, 0, getWidth(), getHeight());
+        bufferGraphics.setColor(this.getForeground());
+
+        for (GShape shape : shapes) {
+            shape.draw(bufferGraphics);
+        }
+        bufferGraphics.dispose();
+        repaint();
     }
 
     private class MouseHandler implements MouseListener,MouseMotionListener {
@@ -225,16 +226,14 @@ public class GDrawingPanel extends JPanel {
             }
         }
         private void mouseLButtonClicked(MouseEvent e) {
-            if(eDrawingState == EDrawingState.eIdle) { // target state
-                if(toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) { // context
-                    startNewShape(e.getX(), e.getY());
+            if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) {
+                if (eDrawingState == EDrawingState.eIdle) {
+                    startTransform(e.getX(), e.getY());
                     eDrawingState = EDrawingState.eTransforming;
-                } else {
-                    if (toolBar.getEShapeType().getDrawingType() == Constants.EDrawingType.eNPoint) {
-                        continueDrawing(e.getX(), e.getY());
-                    }
+                } else if (eDrawingState == EDrawingState.eTransforming) {
+                    continueDrawing(e.getX(), e.getY());
                 }
-                prepareDrawing(); // prepare for double buffering
+                prepareDrawing();
             }
         }
         @Override
